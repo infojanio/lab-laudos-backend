@@ -11,4 +11,4 @@ services:
     environment:
       - POSTGRESQL_USERNAME=janio
       - POSTGRESQL_PASSWORD=j2240
-      - POSTGRESQL_DATABASE=iaki-marketplace
+      - POSTGRESQL_DATABASE=lab_laudos
