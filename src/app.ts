@@ -7,12 +7,11 @@ import { env } from "@/env";
 
 import { usersRoutes } from "@/http/controllers/users/routes";
 import { storesRoutes } from "@/http/controllers/stores/routes";
-import { ordersRoutes } from "@/http/controllers/orders/routes";
-import { cartsRoutes } from "@/http/controllers/carts/routes";
+
 import { productsRoutes } from "@/http/controllers/products/routes";
 import { subcategoriesRoutes } from "@/http/controllers/subcategories/routes";
 import { categoriesRoutes } from "./http/controllers/categories/routes";
-import { cashbacksRoutes } from "./http/controllers/cashbacks/routes";
+
 import { dashboardRoutes } from "./http/controllers/dashboard/routes";
 import { bannersRoutes } from "./http/controllers/banners/routes";
 import { reelsRoutes } from "./http/controllers/reels/routes";
@@ -21,9 +20,6 @@ import { storeBusinessCategoryRoutes } from "./http/controllers/store-business-c
 import { businessCategoriesRoutes } from "./http/controllers/business-category/routes";
 import { statesRoutes } from "./http/controllers/states/routes";
 import { storeCategoryRoutes } from "./http/controllers/store-category/routes";
-import { storeEvaluationsRoutes } from "./http/controllers/store-evaluations/routes";
-import { storePointsRoutes } from "./http/controllers/store-points/routes";
-import { storeRewardsRoutes } from "./http/controllers/store-reward/routes";
 
 export const app = fastify({
   // logger: true,
@@ -45,24 +41,22 @@ app.register(fastifyCors, {
 });
 
 app.register(usersRoutes);
-app.register(cartsRoutes);
+
 app.register(businessCategoriesRoutes);
 app.register(statesRoutes);
 app.register(citiesRoutes);
 app.register(storesRoutes);
-app.register(storePointsRoutes);
+
 app.register(storeBusinessCategoryRoutes);
 app.register(storeCategoryRoutes);
 app.register(categoriesRoutes);
 app.register(bannersRoutes);
 app.register(reelsRoutes);
-app.register(cashbacksRoutes);
+
 app.register(subcategoriesRoutes);
 app.register(productsRoutes);
-app.register(ordersRoutes);
+
 app.register(dashboardRoutes);
-app.register(storeEvaluationsRoutes);
-app.register(storeRewardsRoutes);
 
 app.addHook("preHandler", async (request, reply) => {
   // console.log('REQUEST BODY:', request.body)

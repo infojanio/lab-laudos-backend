@@ -1,12 +1,11 @@
 import { FastifyReply, FastifyRequest } from "fastify";
+import { Role } from "@prisma/client";
 
-type UserRole = "ADMIN" | "USER";
-
-export function verifyUserRole(...allowedRoles: UserRole[]) {
+export function verifyUserRole(...allowedRoles: Role[]) {
   return async (request: FastifyRequest, reply: FastifyReply) => {
     const user = request.user;
 
-    if (!user || !user.role) {
+    if (!user) {
       return reply.status(401).send({
         message: "Usuário não autenticado.",
       });
@@ -18,10 +17,10 @@ export function verifyUserRole(...allowedRoles: UserRole[]) {
       });
     }
 
-    // 🔥 REGRA CRÍTICA
-    if (user.role === "ADMIN" && !user.storeId) {
+    // regra multi-tenant
+    if (user.role === Role.ADMIN && !user.storeId) {
       return reply.status(403).send({
-        message: "Administrador não vinculado a nenhuma loja.",
+        message: "Administrador não vinculado a nenhum laboratório.",
       });
     }
   };
