@@ -1,4 +1,4 @@
-import { ClientsRepository } from "@/repositories/prisma/Iprisma/clientes-repository";
+import { ClientsRepository } from "@/repositories/prisma/Iprisma/clients-repository";
 import { Client } from "@prisma/client";
 
 interface GetClientRequest {

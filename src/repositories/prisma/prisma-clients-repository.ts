@@ -1,6 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { Client, Prisma } from "@prisma/client";
-import { ClientsRepository } from "./Iprisma/clientes-repository";
+import { ClientsRepository } from "./Iprisma/clients-repository";
 
 export class PrismaClientsRepository implements ClientsRepository {
   async create(data: Prisma.ClientUncheckedCreateInput): Promise<Client> {
@@ -21,6 +21,16 @@ export class PrismaClientsRepository implements ClientsRepository {
       orderBy: {
         createdAt: "desc",
       },
+    });
+  }
+
+  async update(
+    id: string,
+    data: Prisma.ClientUncheckedUpdateInput,
+  ): Promise<Client> {
+    return prisma.client.update({
+      where: { id },
+      data,
     });
   }
 

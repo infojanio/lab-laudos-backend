@@ -1,4 +1,4 @@
-import { PrismaClientsRepository } from "@/repositories/prisma/prisma-clientes-repository";
+import { PrismaClientsRepository } from "@/repositories/prisma/prisma-clients-repository";
 import { ListClientsUseCase } from "../clients/list-clients";
 
 export function makeListClientsUseCase() {

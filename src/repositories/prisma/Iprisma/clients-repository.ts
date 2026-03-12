@@ -7,5 +7,7 @@ export interface ClientsRepository {
 
   findManyByStore(storeId: string): Promise<Client[]>;
 
+  update(id: string, data: Prisma.ClientUncheckedUpdateInput): Promise<Client>;
+
   findByDocument(storeId: string, document: string): Promise<Client | null>;
 }
