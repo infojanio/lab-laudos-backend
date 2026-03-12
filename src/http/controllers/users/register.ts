@@ -2,13 +2,13 @@ import { z } from "zod"; //responsável pela validação dos dados
 import { FastifyReply, FastifyRequest } from "fastify";
 import { UserAlreadyExistsError } from "@/utils/messages/errors/user-already-exists-error";
 import { makeRegisterUseCase } from "@/use-cases/_factories/make-register-use-case";
-import { makeAddressUseCase } from "@/use-cases/_factories/make-address-use-case";
 import isValidCPF from "@/utils/IsValidCPF";
 
 // Definição do enum Role
 enum Role {
   USER = "USER",
   ADMIN = "ADMIN",
+  SUPER_ADMIN = "SUPER_ADMIN",
 }
 
 export async function register(request: FastifyRequest, reply: FastifyReply) {
@@ -23,10 +23,8 @@ export async function register(request: FastifyRequest, reply: FastifyReply) {
     cpf: z.string().refine(isValidCPF, {
       message: "CPF inválido",
     }),
-    street: z.string(),
-    cityId: z.string().optional(),
-    state: z.string().optional(),
-    postalCode: z.string(),
+
+    storeId: z.string().optional(),
   });
 
   const {
@@ -37,11 +35,8 @@ export async function register(request: FastifyRequest, reply: FastifyReply) {
     phone,
     role,
     avatar,
-    cityId,
+    storeId,
     cpf,
-    postalCode,
-    state,
-    street,
   } = registerBodySchema.parse(request.body);
 
   try {
@@ -56,10 +51,7 @@ export async function register(request: FastifyRequest, reply: FastifyReply) {
       cpf,
       role,
       avatar,
-      cityId,
-      postalCode,
-      state,
-      street,
+      storeId,
     });
 
     // Retorna status 201, mensagem de sucesso e os dados do usuário criado
@@ -71,6 +63,8 @@ export async function register(request: FastifyRequest, reply: FastifyReply) {
       },
     });
   } catch (error) {
+    console.error("REGISTER USER ERROR:");
+    console.error(error);
     if (error instanceof UserAlreadyExistsError) {
       return reply.status(409).send({ message: error.message });
     }

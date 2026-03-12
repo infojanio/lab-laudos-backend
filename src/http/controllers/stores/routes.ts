@@ -41,10 +41,10 @@ export async function storesRoutes(app: FastifyInstance) {
 
   // 🔐 As demais rotas exigem autenticação
   app.addHook("onRequest", verifyJWT);
-  app.post("/stores", { onRequest: [verifyUserRole("ADMIN")] }, create);
+  app.post("/stores", { onRequest: [verifyUserRole("SUPER_ADMIN")] }, create);
   app.patch(
     "/stores/:storeId/toggle-status",
-    { onRequest: [verifyUserRole("ADMIN")] },
+    { onRequest: [verifyUserRole("SUPER_ADMIN")] },
     toggleStatus,
   );
 }

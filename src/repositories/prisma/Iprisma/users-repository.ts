@@ -1,18 +1,7 @@
 import { Prisma, Role, User } from "@prisma/client";
-import { Decimal } from "@prisma/client/runtime/library";
 
 /**
- * Endereço simples (User possui campos diretos, não array)
- */
-export type AddressDTO = {
-  street: string | null;
-  cityId: string | null;
-  state: string | null;
-  postalCode: string | null;
-};
-
-/**
- * Perfil público do usuário (SEM dados sensíveis)
+ * Perfil público do usuário
  */
 export type UserProfileDB = {
   id: string;
@@ -22,12 +11,11 @@ export type UserProfileDB = {
   role: Role;
   avatar: string | null;
   createdAt: Date;
-  address: AddressDTO;
+  storeId: string | null;
 };
 
 /**
- * Retorno específico para autenticação
- * 🔐 ESSENCIAL para JWT e regras de segurança
+ * Retorno para autenticação
  */
 export type AuthUserDB = {
   id: string;
@@ -40,39 +28,22 @@ export type AuthUserDB = {
 };
 
 export interface UsersRepository {
-  /**
-   * Perfil público
-   */
   findProfileById(userId: string): Promise<UserProfileDB | null>;
 
-  /**
-   * Busca completa (uso interno / admin)
-   */
   findById(id: string): Promise<User | null>;
 
   /**
-   * 🔐 AUTENTICAÇÃO
-   * Deve retornar storeId para regras de autorização
+   * 🔐 usado no login
    */
   findByEmail(email: string): Promise<AuthUserDB | null>;
 
   /**
-   * Criação
+   * criação de usuário
    */
   create(data: Prisma.UserUncheckedCreateInput): Promise<User>;
 
   /**
-   * Atualização genérica
+   * update
    */
   update(userId: string, data: Prisma.UserUncheckedUpdateInput): Promise<User>;
-
-  /**
-   * Atualiza cidade
-   */
-  updateCity(userId: string, cityId: string): Promise<User>;
-
-  /**
-   * Saldo de cashback
-   */
-  balanceByUserId(userId: string): Promise<number>;
 }

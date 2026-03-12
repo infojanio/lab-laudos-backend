@@ -14,7 +14,19 @@ export async function authenticate(
     password: z.string().min(6),
   });
 
-  const { email, password } = authenticateBodySchema.parse(request.body);
+  //const { email, password } = authenticateBodySchema.parse(request.body);
+  const parsed = authenticateBodySchema.safeParse(request.body);
+
+  if (!parsed.success) {
+    console.error("AUTH VALIDATION ERROR:", parsed.error.format());
+
+    return reply.status(400).send({
+      message: "Dados inválidos",
+      error: parsed.error.format(),
+    });
+  }
+
+  const { email, password } = parsed.data;
 
   try {
     const authenticateUseCase = makeAuthenticateUseCase();
@@ -24,24 +36,12 @@ export async function authenticate(
       password,
     });
 
-    // 💰 saldo do usuário (opcional, mantido)
-    const cashback = await prisma.cashback.aggregate({
-      where: {
-        userId: user.id,
-        status: "CONFIRMED",
-      },
-      _sum: {
-        amount: true,
-      },
-    });
-
-    const userBalance = cashback._sum.amount ?? 0;
-
     // 🔐 ACCESS TOKEN (15 min)
     const accessToken = await reply.jwtSign(
       {
         role: user.role,
-        storeId: user.storeId ?? null,
+        sub: user.id,
+        storeId: user.storeId ?? undefined,
       },
       {
         sign: {
@@ -55,7 +55,8 @@ export async function authenticate(
     const refreshToken = await reply.jwtSign(
       {
         role: user.role,
-        storeId: user.storeId ?? null,
+        sub: user.id,
+        storeId: user.storeId ?? undefined,
       },
       {
         sign: {
@@ -81,7 +82,6 @@ export async function authenticate(
         email: user.email,
         role: user.role,
         avatar: user.avatar,
-        balance: userBalance,
       },
       accessToken,
       refreshToken,

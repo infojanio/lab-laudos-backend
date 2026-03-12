@@ -1,27 +1,43 @@
 import { FastifyRequest, FastifyReply } from "fastify";
-import { z } from "zod";
+import { z, ZodError } from "zod";
 import { makeFetchReportsUseCase } from "@/use-cases/_factories/make-fetch-reports-use-case";
 
 export async function fetchReports(
   request: FastifyRequest,
   reply: FastifyReply,
 ) {
-  const querySchema = z.object({
-    page: z.coerce.number().min(1).default(1),
-  });
+  try {
+    const querySchema = z.object({
+      page: z.coerce.number().min(1).default(1),
+    });
 
-  const { page } = querySchema.parse(request.query);
+    const { page } = querySchema.parse(request.query);
 
-  const { storeId } = request.user;
+    const { storeId } = request.user;
 
-  const fetchReportsUseCase = makeFetchReportsUseCase();
+    const fetchReportsUseCase = makeFetchReportsUseCase();
 
-  const { reports } = await fetchReportsUseCase.execute({
-    storeId,
-    page,
-  });
+    const { reports } = await fetchReportsUseCase.execute({
+      storeId,
+      page,
+    });
 
-  return reply.status(200).send({
-    reports,
-  });
+    return reply.status(200).send({
+      reports,
+    });
+  } catch (error) {
+    console.error("FETCH REPORTS ERROR:");
+    console.error(error);
+
+    if (error instanceof ZodError) {
+      return reply.status(400).send({
+        message: "Erro de validação",
+        issues: error.format(),
+      });
+    }
+
+    return reply.status(500).send({
+      message: "Erro ao listar laudos",
+    });
+  }
 }

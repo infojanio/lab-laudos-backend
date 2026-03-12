@@ -2,7 +2,6 @@ import { UsersRepository } from "@/repositories/prisma/Iprisma/users-repository"
 import { hash } from "bcryptjs";
 import { UserAlreadyExistsError } from "../../utils/messages/errors/user-already-exists-error";
 import { Role, User } from "@prisma/client";
-import { AddressesRepository } from "@/repositories/prisma/Iprisma/addresses-repository";
 
 interface RegisterUseCaseRequest {
   id?: string;
@@ -13,10 +12,7 @@ interface RegisterUseCaseRequest {
   avatar: string;
   role: Role;
   cpf?: string;
-  street: string;
-  cityId: string | undefined;
-  state: string | undefined;
-  postalCode: string;
+  storeId?: string;
 }
 
 interface RegisterUseCaseResponse {
@@ -24,56 +20,37 @@ interface RegisterUseCaseResponse {
 }
 
 export class RegisterUseCase {
-  constructor(
-    private usersRepository: UsersRepository,
-    private addressesRepository: AddressesRepository,
-  ) {}
+  constructor(private usersRepository: UsersRepository) {}
 
   async execute({
-    id,
     name,
     email,
     password,
     phone,
-    cpf,
     avatar,
     role,
-    cityId,
-    postalCode,
-    state,
-    street,
+    cpf,
+    storeId,
   }: RegisterUseCaseRequest): Promise<RegisterUseCaseResponse> {
-    try {
-      const passwordHash = await hash(password, 6);
+    const passwordHash = await hash(password, 6);
 
-      const userWithSameEmail = await this.usersRepository.findByEmail(email);
+    const userWithSameEmail = await this.usersRepository.findByEmail(email);
 
-      if (userWithSameEmail) {
-        throw new UserAlreadyExistsError();
-      }
-
-      // Cria o usuário
-      const user = await this.usersRepository.create({
-        id,
-        name,
-        email,
-        passwordHash,
-        phone,
-        cpf,
-        state,
-        cityId,
-        postalCode,
-        street,
-        avatar,
-        role,
-      });
-
-      return { user };
-    } catch (error) {
-      if (error instanceof UserAlreadyExistsError) {
-        throw error;
-      }
-      throw new Error("Erro inesperado ao registrar usuário e endereço");
+    if (userWithSameEmail) {
+      throw new UserAlreadyExistsError();
     }
+
+    const user = await this.usersRepository.create({
+      name,
+      email,
+      passwordHash,
+      phone,
+      avatar,
+      cpf,
+      role,
+      storeId,
+    });
+
+    return { user };
   }
 }

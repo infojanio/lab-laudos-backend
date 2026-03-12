@@ -20,6 +20,7 @@ import { storeBusinessCategoryRoutes } from "./http/controllers/store-business-c
 import { businessCategoriesRoutes } from "./http/controllers/business-category/routes";
 import { statesRoutes } from "./http/controllers/states/routes";
 import { storeCategoryRoutes } from "./http/controllers/store-category/routes";
+import { reportsRoutes } from "./http/controllers/reports/routes";
 
 export const app = fastify({
   // logger: true,
@@ -55,7 +56,7 @@ app.register(reelsRoutes);
 
 app.register(subcategoriesRoutes);
 app.register(productsRoutes);
-
+app.register(reportsRoutes);
 app.register(dashboardRoutes);
 
 app.addHook("preHandler", async (request, reply) => {
@@ -69,7 +70,7 @@ app.setErrorHandler((error, _request, reply) => {
       .send({ message: "Validation error.", issues: error.format() });
   }
 
-  if (env.NODE_ENV !== "production") {
+  if (env.NODE_ENV !== "development") {
     console.log(error);
   } else {
     // AQUI deveremos fazer um log para uma ferramenta externa, como DataDog, NewRelic, Sentry

@@ -9,8 +9,7 @@ interface RegisterUseCaseRequest {
   name: string;
   slug: string;
   isActive: boolean;
-  latitude: number;
-  longitude: number;
+
   phone: string;
   cnpj: string;
   avatar: string;
@@ -31,8 +30,6 @@ export class RegisterUseCase {
     name,
     slug,
     isActive,
-    latitude,
-    longitude,
     phone,
     cnpj,
     avatar,
@@ -54,8 +51,6 @@ export class RegisterUseCase {
         phone,
         slug,
         isActive,
-        latitude,
-        longitude,
         cnpj,
         avatar,
         street,

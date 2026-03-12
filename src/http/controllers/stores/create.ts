@@ -10,8 +10,7 @@ export async function create(request: FastifyRequest, reply: FastifyReply) {
     phone: z.string(),
     slug: z.string(),
     isActive: z.boolean().default(true),
-    latitude: z.number(),
-    longitude: z.number(),
+
     cnpj: z.string(),
     avatar: z.string(),
     street: z.string(),
@@ -25,8 +24,7 @@ export async function create(request: FastifyRequest, reply: FastifyReply) {
     phone,
     slug,
     isActive,
-    latitude,
-    longitude,
+
     cnpj,
     avatar,
     street,
@@ -43,8 +41,7 @@ export async function create(request: FastifyRequest, reply: FastifyReply) {
       phone,
       slug,
       isActive,
-      latitude,
-      longitude,
+
       cnpj,
       avatar,
       street,
