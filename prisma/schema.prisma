@@ -16,9 +16,11 @@ datasource db {
 ///////////////////////////////////////////////////////////////
 
 enum Role {
-  USER         // usuário comum (interno, se quiser)
-  ADMIN        // admin do laboratório (tenant admin)
-  SUPER_ADMIN  // dono do SaaS
+  USER
+  ADMIN
+  SUPER_ADMIN
+  TECHNICIAN
+  VIEWER
 }
 
 enum SubscriptionStatus {
@@ -26,6 +28,7 @@ enum SubscriptionStatus {
   PAST_DUE
   CANCELED
   EXPIRED
+  TRIALING
 }
 
 enum AnalysisType {
@@ -37,10 +40,10 @@ enum AnalysisType {
 }
 
 enum ReportStatus {
+  EM_ANALISE
   VALIDO
   SUBSTITUIDO
   CANCELADO
-  EM_ANALISE
 }
 
 enum ReportSection {
@@ -48,15 +51,23 @@ enum ReportSection {
   MICROBIOLOGICO
 }
 
+enum SampleStatus {
+  RECEIVED
+  IN_ANALYSIS
+  COMPLETED
+  REPORTED
+  CANCELED
+}
+
 enum ProductType {
-  REAGENT     // reagente
-  MATERIAL    // material de consumo
-  EQUIPMENT   // equipamento
+  REAGENT
+  MATERIAL
+  EQUIPMENT
   OTHER
 }
 
 ///////////////////////////////////////////////////////////////
-// LOCATION (OPCIONAL, MAS ÚTIL)
+// LOCATION
 ///////////////////////////////////////////////////////////////
 
 model State {
@@ -76,11 +87,11 @@ model City {
   stateId   String   @map("state_id")
   createdAt DateTime @default(now())
 
-  state State @relation(fields: [stateId], references: [id])
-
+  state  State   @relation(fields: [stateId], references: [id])
   stores Store[]
 
   @@unique([name, stateId])
+  @@index([stateId])
   @@map("cities")
 }
 
@@ -89,59 +100,75 @@ model City {
 ///////////////////////////////////////////////////////////////
 
 model Store {
-  id          String   @id @default(uuid())
-  name        String
-  slug        String?  @unique
-  isActive    Boolean  @default(true)
+  id       String  @id @default(uuid())
+  name     String
+  slug     String  @unique
+  isActive Boolean @default(true)
 
-  // dados do laboratório
-  cnpj        String?
-  phone       String?
-  email       String?
-  street      String?
-  postalCode  String?  @map("postal_code")
-  cityId      String?  @map("city_id")
-  state       String?
-  avatar      String?  // logo
-  createdAt   DateTime @default(now()) @map("created_at")
+  // branding / identidade do laboratório
+  cnpj         String?
+  phone        String?
+  email        String?
+  street       String?
+  postalCode   String? @map("postal_code")
+  cityId       String? @map("city_id")
+  state        String?
+  logoUrl      String? @map("logo_url")
+  avatar       String?
+  primaryColor String? @map("primary_color")
 
-  // assinatura do laboratório (imagem do responsável / carimbo)
-  signatureImageUrl String? @map("signature_image_url")
+  // responsável técnico padrão
+  responsibleTechnician  String? @map("responsible_technician")
+  technicianRegistration String? @map("technician_registration")
+  signatureImageUrl      String? @map("signature_image_url")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @default(now()) @map("updated_at")
 
   city City? @relation(fields: [cityId], references: [id])
 
   // multi-tenant relations
-  users         User[]
-  clients       Client[]
-  reports       Report[]
-  products      Product[]
-  subscriptions Subscription[]
-
-  // tipo(s) de laboratório
+  users                   User[]
+  clients                 Client[]
+  samples                 Sample[]
+  reports                 Report[]
+  labParameters           LabParameter[]
+  products                Product[]
+  subscriptions           Subscription[]
+  auditLogs               AuditLog[]
   storeBusinessCategories StoreBusinessCategory[]
 
+  @@index([cityId])
   @@map("stores")
 }
 
-model User {
-  id           String   @id @default(uuid())
-  name         String
-  email        String   @unique
-  passwordHash String   @map("password_hash")
-  role         Role     @default(USER)
+///////////////////////////////////////////////////////////////
+// USERS / AUTH
+///////////////////////////////////////////////////////////////
 
-  phone       String?
-  cpf         String?
-  avatar      String?
-  createdAt   DateTime @default(now()) @map("created_at")
+model User {
+  id           String @id @default(uuid())
+  name         String
+  email        String @unique
+  passwordHash String @map("password_hash")
+  role         Role   @default(USER)
+
+  phone     String?
+  cpf       String?
+  avatar    String?
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @default(now()) @map("updated_at")
 
   // tenant scoping
   storeId String? @map("store_id")
-  store   Store?  @relation(fields: [storeId], references: [id])
+  store   Store?  @relation(fields: [storeId], references: [id], onDelete: SetNull)
 
   refreshTokens RefreshToken[]
+  auditLogs     AuditLog[]
 
   @@index([storeId])
+  @@index([role])
   @@map("users")
 }
 
@@ -155,6 +182,7 @@ model RefreshToken {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
+  @@index([expiresAt])
   @@map("refresh_tokens")
 }
 
@@ -163,16 +191,15 @@ model RefreshToken {
 ///////////////////////////////////////////////////////////////
 
 model Plan {
-  id           String   @id
-  name         String
-  price        Decimal
-  description  String?
-  createdAt    DateTime @default(now()) @map("created_at")
+  id          String   @id
+  name        String
+  price       Decimal
+  description String?
+  createdAt   DateTime @default(now()) @map("created_at")
 
-  // limites do SaaS (ajuste como quiser)
-  reportLimit  Int @default(1000) @map("report_limit")
-  userLimit    Int @default(10)   @map("user_limit")
-  storageGb    Int @default(5)    @map("storage_gb")
+  reportLimit Int @default(1000) @map("report_limit")
+  userLimit   Int @default(10) @map("user_limit")
+  storageGb   Int @default(5) @map("storage_gb")
 
   subscriptions Subscription[]
 
@@ -188,17 +215,19 @@ model Subscription {
   endAt     DateTime           @map("end_at")
   renewedAt DateTime?          @map("renewed_at")
   createdAt DateTime           @default(now()) @map("created_at")
+  updatedAt DateTime           @updatedAt @map("updated_at")
 
   plan  Plan  @relation(fields: [planId], references: [id])
   store Store @relation(fields: [storeId], references: [id], onDelete: Cascade)
 
   @@index([storeId])
   @@index([planId])
+  @@index([status])
   @@map("subscriptions")
 }
 
 ///////////////////////////////////////////////////////////////
-// LAB TYPE (BUSINESS CATEGORY = TIPO DE LAB)
+// LAB TYPE / BUSINESS CATEGORY
 ///////////////////////////////////////////////////////////////
 
 model BusinessCategory {
@@ -213,9 +242,9 @@ model BusinessCategory {
 }
 
 model StoreBusinessCategory {
-  id         String           @id @default(uuid())
-  storeId    String           @map("store_id")
-  categoryId String           @map("category_id")
+  id         String @id @default(uuid())
+  storeId    String @map("store_id")
+  categoryId String @map("category_id")
 
   store    Store            @relation(fields: [storeId], references: [id], onDelete: Cascade)
   category BusinessCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
@@ -227,113 +256,180 @@ model StoreBusinessCategory {
 }
 
 ///////////////////////////////////////////////////////////////
-// CLIENTS (DOMÍNIO DO LAB)
+// CLIENTS
 ///////////////////////////////////////////////////////////////
 
 model Client {
-  id        String   @id @default(uuid())
-  storeId   String   @map("store_id")
+  id      String @id @default(uuid())
+  storeId String @map("store_id")
 
-  name      String
-  email     String?
-  document  String?  // CPF/CNPJ
-  phone     String?
-  company   String?
-  address   String?
+  name         String
+  email        String?
+  document     String?
+  phone        String?
+  company      String?
+  address      String?
   municipality String?
 
+  isActive  Boolean  @default(true)
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
-  store   Store   @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  store   Store    @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  samples Sample[]
   reports Report[]
 
-  // evita duplicar clientes no mesmo laboratório
   @@unique([storeId, document])
   @@index([storeId])
+  @@index([storeId, name])
   @@map("clients")
 }
 
 ///////////////////////////////////////////////////////////////
-// REPORTS (LAUDOS)
+// SAMPLE TRACKING
+///////////////////////////////////////////////////////////////
+
+model Sample {
+  id       String  @id @default(uuid())
+  storeId  String  @map("store_id")
+  clientId String? @map("client_id")
+
+  code           String
+  identification String?
+  location       String?
+
+  collectionDate DateTime? @map("collection_date")
+  receivedDate   DateTime? @map("received_date")
+  collectorName  String?   @map("collector_name")
+
+  latitude  String?
+  longitude String?
+
+  weatherCondition   String? @map("weather_condition")
+  ambientTemperature String? @map("ambient_temperature")
+
+  status SampleStatus @default(RECEIVED)
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  store   Store    @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  client  Client?  @relation(fields: [clientId], references: [id], onDelete: SetNull)
+  reports Report[]
+
+  @@unique([storeId, code])
+  @@index([storeId])
+  @@index([clientId])
+  @@index([status])
+  @@map("samples")
+}
+
+///////////////////////////////////////////////////////////////
+// LAB PARAMETER LIBRARY
+///////////////////////////////////////////////////////////////
+
+model LabParameter {
+  id      String @id @default(uuid())
+  storeId String @map("store_id")
+
+  name    String
+  section ReportSection
+  unit    String?
+  method  String?
+  vmp     String?
+
+  isActive Boolean @default(true)
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  store Store @relation(fields: [storeId], references: [id], onDelete: Cascade)
+
+  @@unique([storeId, name, section])
+  @@index([storeId])
+  @@index([section])
+  @@map("lab_parameters")
+}
+
+///////////////////////////////////////////////////////////////
+// REPORTS
 ///////////////////////////////////////////////////////////////
 
 model Report {
-  id        String      @id @default(uuid())
-  storeId   String      @map("store_id")
-  clientId  String?     @map("client_id")
+  id       String  @id @default(uuid())
+  storeId  String  @map("store_id")
+  clientId String? @map("client_id")
+  sampleId String? @map("sample_id")
 
-  // Número do ensaio / número do laudo (pode ser gerado por sequência por store futuramente)
-  reportNumber String?  @map("report_number")
+  reportNumber String? @map("report_number")
+  sequence     Int?
 
   analysisType AnalysisType
   status       ReportStatus @default(EM_ANALISE)
 
-  // datas
-  sampleDate   DateTime? @map("sample_date")
-  issueDate    DateTime? @map("issue_date")
-  entryDate    DateTime? @map("entry_date")
-  collectionTime String? @map("collection_time")
+  sampleDate     DateTime? @map("sample_date")
+  issueDate      DateTime? @map("issue_date")
+  entryDate      DateTime? @map("entry_date")
+  collectionTime String?   @map("collection_time")
 
-  // campos de amostra
-  identification   String?
-  location         String?
-  collectionAgent  String? @map("collection_agent")
+  identification  String?
+  location        String?
+  collectionAgent String? @map("collection_agent")
 
-  // responsável técnico (pode vir do user/admin ou manual)
   responsibleTechnician  String? @map("responsible_technician")
   technicianRegistration String? @map("technician_registration")
 
-  description String?
+  description  String?
+  observations String?
 
-  // PDF assinado + URL pública (ex: /pdf/:filename)
   signedPdfUrl String? @map("signed_pdf_url")
+  qrCodeUrl    String? @map("qr_code_url")
+  publicUrl    String? @map("public_url")
 
-  // base legal VMP / referência
   vmpReference String? @map("vmp_reference")
-
-  // QRCode (opcional: pode gerar no backend e persistir)
-  qrCodeUrl   String? @map("qr_code_url")
-  publicUrl   String? @map("public_url")
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
   store  Store   @relation(fields: [storeId], references: [id], onDelete: Cascade)
   client Client? @relation(fields: [clientId], references: [id], onDelete: SetNull)
+  sample Sample? @relation(fields: [sampleId], references: [id], onDelete: SetNull)
 
   results ReportResultRow[]
 
   @@index([storeId])
   @@index([clientId])
+  @@index([sampleId])
+  @@index([storeId, createdAt])
+  @@index([status])
   @@map("reports")
 }
 
 model ReportResultRow {
-  id        String        @id @default(uuid())
-  reportId  String        @map("report_id")
-  section   ReportSection
+  id       String        @id @default(uuid())
+  reportId String        @map("report_id")
+  section  ReportSection
 
-  // linha de ensaio
   parameter String
   result    String
   unit      String?
   method    String?
-  vmp       String? // valor máximo permitido, se quiser fixar por linha
+  vmp       String?
   notes     String?
 
-  order     Int? @default(0)
+  order Int? @default(0)
 
   createdAt DateTime @default(now()) @map("created_at")
 
   report Report @relation(fields: [reportId], references: [id], onDelete: Cascade)
 
   @@index([reportId])
+  @@index([section])
   @@map("report_result_rows")
 }
 
 ///////////////////////////////////////////////////////////////
-// STOCK / REAGENTS (REUSANDO PRODUCT/CATEGORY/SUBCATEGORY)
+// STOCK / INVENTORY
 ///////////////////////////////////////////////////////////////
 
 model Category {
@@ -358,33 +454,61 @@ model SubCategory {
   products Product[]
 
   @@unique([name, categoryId])
+  @@index([categoryId])
   @@map("subcategories")
 }
 
 model Product {
-  id            String      @id @default(uuid())
-  storeId       String      @map("store_id")
-  subcategoryId String      @map("subcategory_id")
+  id            String @id @default(uuid())
+  storeId       String @map("store_id")
+  subcategoryId String @map("subcategory_id")
 
-  type          ProductType @default(REAGENT)
+  type ProductType @default(REAGENT)
 
-  name          String
-  description   String?
-  quantity      Decimal     @default(0) // estoque atual
-  minStock      Int         @default(5)
-  unit          String?     // ex: "mL", "g", "un", "frasco"
-  lotNumber     String?     @map("lot_number")
-  expiresAt     DateTime?   @map("expires_at")
+  name        String
+  description String?
+  quantity    Decimal   @default(0)
+  minStock    Int       @default(5)
+  unit        String?
+  lotNumber   String?   @map("lot_number")
+  expiresAt   DateTime? @map("expires_at")
 
-  image         String?
-  status        Boolean     @default(true)
+  image  String?
+  status Boolean @default(true)
 
-  createdAt     DateTime    @default(now()) @map("created_at")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
 
   store       Store       @relation(fields: [storeId], references: [id], onDelete: Cascade)
   subcategory SubCategory @relation(fields: [subcategoryId], references: [id])
 
+  @@unique([storeId, name])
   @@index([storeId])
   @@index([subcategoryId])
   @@map("products")
+}
+
+///////////////////////////////////////////////////////////////
+// AUDIT LOGS
+///////////////////////////////////////////////////////////////
+
+model AuditLog {
+  id      String  @id @default(uuid())
+  storeId String  @map("store_id")
+  userId  String? @map("user_id")
+
+  entity   String
+  entityId String
+  action   String
+  payload  Json?
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  store Store @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  user  User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([storeId])
+  @@index([userId])
+  @@index([entity, entityId])
+  @@map("audit_logs")
 }

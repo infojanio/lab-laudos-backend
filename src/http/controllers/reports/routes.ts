@@ -12,19 +12,19 @@ export async function reportsRoutes(app: FastifyInstance) {
 
   app.post(
     "/reports",
-    { onRequest: [verifyUserRole("SUPER_ADMIN")] },
+    { onRequest: [verifyUserRole("ADMIN", "SUPER_ADMIN")] },
     createReport,
   );
 
   app.get(
     "/reports",
-    { onRequest: [verifyUserRole("SUPER_ADMIN")] },
+    { onRequest: [verifyUserRole("ADMIN", "SUPER_ADMIN")] },
     fetchReports,
   );
 
   app.get(
     "/reports/:id",
-    { onRequest: [verifyUserRole("SUPER_ADMIN")] },
+    { onRequest: [verifyUserRole("ADMIN", "SUPER_ADMIN")] },
     getReport,
   );
 }
